@@ -32,6 +32,7 @@ export class TasksService {
       description: dto.description ?? '',
       projectId: dto.projectId ?? null,
       assignedAgentId: dto.assignedAgentId ?? null,
+      planId: dto.planId ?? null,
     });
     const saved = await this.tasks.save(task);
     await this.events.emit({ type: 'task.created', task: saved.toDto() });

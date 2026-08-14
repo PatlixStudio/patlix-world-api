@@ -29,6 +29,9 @@ export class Task {
   @Column({ type: 'uuid', nullable: true })
   assignedAgentId: string | null;
 
+  @Column({ type: 'uuid', nullable: true })
+  planId: string | null;
+
   @Column({ type: 'int', default: 0 })
   progress: number;
 
@@ -52,6 +55,7 @@ export class Task {
       status: this.status,
       projectId: this.projectId ?? undefined,
       assignedAgentId: this.assignedAgentId ?? undefined,
+      planId: this.planId ?? undefined,
       progress: this.progress,
       currentActivity: this.currentActivity,
       createdAt: this.createdAt.toISOString(),

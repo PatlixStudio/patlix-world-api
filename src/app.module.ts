@@ -15,6 +15,8 @@ import { EventsModule } from './events/events.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { WorldModule } from './world/world.module';
 import { SeedModule } from './seed/seed.module';
+import { ModelsModule } from './models/models.module';
+import { OrchestrationModule } from './orchestration/orchestration.module';
 
 /**
  * Root module. Patlix World backend — source of truth for the AI workforce
@@ -51,6 +53,8 @@ import { SeedModule } from './seed/seed.module';
     EventsModule,
     WorldModule,
     SeedModule,
+    ModelsModule,
+    OrchestrationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

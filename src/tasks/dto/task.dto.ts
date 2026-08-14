@@ -25,6 +25,10 @@ export class CreateTaskDto {
   @IsOptional()
   @IsString()
   assignedAgentId?: string;
+
+  @IsOptional()
+  @IsString()
+  planId?: string;
 }
 
 export class UpdateTaskDto {
