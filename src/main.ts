@@ -16,9 +16,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.enableCors({ origin: true, credentials: true });
 
-  app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, transform: true }),
-  );
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('patlix-world-api')
