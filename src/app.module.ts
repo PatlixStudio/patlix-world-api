@@ -17,6 +17,7 @@ import { WorldModule } from './world/world.module';
 import { SeedModule } from './seed/seed.module';
 import { ModelsModule } from './models/models.module';
 import { OrchestrationModule } from './orchestration/orchestration.module';
+import { ToolsModule } from './tools/tools.module';
 
 /**
  * Root module. Patlix World backend — source of truth for the AI workforce
@@ -55,6 +56,7 @@ import { OrchestrationModule } from './orchestration/orchestration.module';
     SeedModule,
     ModelsModule,
     OrchestrationModule,
+    ToolsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
