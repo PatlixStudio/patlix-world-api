@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AgentsModule } from '../agents/agents.module';
 import { CompaniesModule } from '../companies/companies.module';
+import { OrchestrationModule } from '../orchestration/orchestration.module';
 import { ProjectsModule } from '../projects/projects.module';
 import { PropertiesModule } from '../properties/properties.module';
 import { TasksModule } from '../tasks/tasks.module';
@@ -17,6 +18,7 @@ import { SeedService } from './seed.service';
     ProjectsModule,
     AgentsModule,
     TasksModule,
+    OrchestrationModule,
   ],
   providers: [SeedService],
 })

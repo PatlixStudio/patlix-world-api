@@ -17,6 +17,7 @@ import { WorldModule } from './world/world.module';
 import { SeedModule } from './seed/seed.module';
 import { ModelsModule } from './models/models.module';
 import { OrchestrationModule } from './orchestration/orchestration.module';
+import { ExecutorModule } from './executor/executor.module';
 import { ToolsModule } from './tools/tools.module';
 
 /**
@@ -56,6 +57,7 @@ import { ToolsModule } from './tools/tools.module';
     SeedModule,
     ModelsModule,
     OrchestrationModule,
+    ExecutorModule,
     ToolsModule,
   ],
   controllers: [AppController],

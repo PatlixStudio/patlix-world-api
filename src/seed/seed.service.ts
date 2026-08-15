@@ -1,7 +1,9 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AgentStatus, PropertyType } from '@patlixworld/shared';
 import { AgentsService } from '../agents/agents.service';
 import { CompaniesService } from '../companies/companies.service';
+import { OrchestrationService } from '../orchestration/orchestration.service';
 import { ProjectsService } from '../projects/projects.service';
 import { PropertiesService } from '../properties/properties.service';
 import { TasksService } from '../tasks/tasks.service';
@@ -25,9 +27,13 @@ export class SeedService implements OnApplicationBootstrap {
     private readonly projects: ProjectsService,
     private readonly agents: AgentsService,
     private readonly tasks: TasksService,
+    private readonly orchestration: OrchestrationService,
+    private readonly config: ConfigService,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
+    await this.seedScenario();
+
     const existing = await this.agents.findAll();
     if (existing.length > 0) {
       this.logger.log(`Seed skipped (${existing.length} agents already present)`);
@@ -202,6 +208,34 @@ export class SeedService implements OnApplicationBootstrap {
         projectId: projects[0]?.id,
         assignedAgentId: developers[0]?.id,
       });
+    }
+  }
+
+  /**
+   * Demo scenario: an Aurel plan gated on human approval, ready on first boot.
+   * Approving it starts a real multi-step run against patlix-world-web.
+   */
+  private async seedScenario(): Promise<void> {
+    if (this.config.get<string>('SEED_SCENARIO', 'true') !== 'true') return;
+    const plans = await this.orchestration.findAll();
+    if (plans.length > 0) {
+      this.logger.log(`Scenario skipped (${plans.length} plans already present)`);
+      return;
+    }
+    try {
+      const plan = await this.orchestration.planAndAssign({
+        title: 'Ship a version footer to patlix-world-web',
+        description:
+          'Add a visible version footer to the 3D client showing the app version and a small build note, include a unit test for it, then review the result.',
+        requireApproval: true,
+      });
+      this.logger.log(
+        `Scenario plan ${plan.id} awaiting approval (${plan.steps.length} steps)`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `Scenario seed failed: ${(err as Error).message}`,
+      );
     }
   }
 }

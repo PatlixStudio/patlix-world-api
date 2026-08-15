@@ -4,8 +4,9 @@ import { OrchestrationRequestDto } from './dto/orchestration-request.dto';
 import { OrchestrationService } from './orchestration.service';
 
 /**
- * Aurel orchestration: submit a request and get a plan with tasks assigned to
- * agents. `POST /api/orchestration/requests` drives the whole pipeline.
+ * Aurel orchestration: submit a request and get a plan. Plans gated on approval
+ * wait in PENDING_APPROVAL until `POST /plans/:id/approve`; assignment and the
+ * real executor start only after approval.
  */
 @Controller('orchestration')
 export class OrchestrationController {
@@ -14,6 +15,16 @@ export class OrchestrationController {
   @Post('requests')
   planAndAssign(@Body() dto: OrchestrationRequestDto): Promise<Plan> {
     return this.orchestration.planAndAssign(dto);
+  }
+
+  @Post('plans/:id/approve')
+  approve(@Param('id') id: string): Promise<Plan> {
+    return this.orchestration.approve(id);
+  }
+
+  @Post('plans/:id/reject')
+  reject(@Param('id') id: string): Promise<Plan> {
+    return this.orchestration.reject(id);
   }
 
   @Get('plans')

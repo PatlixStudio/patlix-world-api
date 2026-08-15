@@ -1,4 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -11,14 +12,16 @@ import {
 } from '@patlixworld/shared';
 import { AgentsService } from '../agents/agents.service';
 import { EventsService } from '../events/events.service';
+import { ExecutorService } from '../executor/executor.service';
 import { ModelsService } from '../models/models.service';
 import { TasksService } from '../tasks/tasks.service';
 import { Plan } from './plan.entity';
 
 /**
  * Aurel — the orchestrator. Receives a high-level request, produces a plan
- * (LLM-generated with a deterministic local fallback), then assigns each step
- * to a capable agent by creating and dispatching Tasks.
+ * (LLM-generated with a deterministic local fallback), gates it on an explicit
+ * human approval when requested, then assigns each step to a capable agent by
+ * creating and dispatching Tasks. Assignment kicks off the real executor.
  */
 @Injectable()
 export class OrchestrationService {
@@ -31,6 +34,8 @@ export class OrchestrationService {
     private readonly tasks: TasksService,
     private readonly models: ModelsService,
     private readonly events: EventsService,
+    private readonly config: ConfigService,
+    private readonly executor: ExecutorService,
   ) {}
 
   findAll(): Promise<Plan[]> {
@@ -45,8 +50,12 @@ export class OrchestrationService {
     return plan;
   }
 
-  /** Request → plan → assign: the heart of Aurel. */
+  /** Request → plan → (approve) → assign: the heart of Aurel. */
   async planAndAssign(request: OrchestrationRequest): Promise<Plan> {
+    const requireApproval =
+      request.requireApproval ??
+      this.config.get<string>('ORCHESTRATION_REQUIRE_APPROVAL', 'true') === 'true';
+
     const plan = this.plans.create({
       requestTitle: request.title,
       requestDescription: request.description ?? '',
@@ -60,20 +69,77 @@ export class OrchestrationService {
     });
 
     saved.steps = await this.generateSteps(request);
-    saved.status = PlanStatus.ACTIVE;
+    saved.status = requireApproval ? PlanStatus.PENDING_APPROVAL : PlanStatus.ACTIVE;
     await this.plans.save(saved);
     await this.events.emit({
       type: 'orchestration.plan.updated',
       plan: (await this.findById(saved.id)).toDto(),
     });
 
-    for (const step of saved.steps) {
+    if (requireApproval) {
+      this.logger.log(
+        `[plan ${saved.id}] awaiting human approval (${saved.steps.length} steps)`,
+      );
+      return saved;
+    }
+    return this.assignAndRun(saved);
+  }
+
+  /** Approve a pending plan: assign every step, then start real execution. */
+  async approve(id: string): Promise<Plan> {
+    const plan = await this.findById(id);
+    if (plan.status !== PlanStatus.PENDING_APPROVAL) {
+      throw new NotFoundException(
+        `Plan ${id} is not awaiting approval (status ${plan.status})`,
+      );
+    }
+    this.logger.log(`[plan ${id}] approved — starting execution`);
+    return this.assignAndRun(plan);
+  }
+
+  /** Reject a pending plan (no work is performed). */
+  async reject(id: string): Promise<Plan> {
+    const plan = await this.findById(id);
+    if (plan.status !== PlanStatus.PENDING_APPROVAL) {
+      throw new NotFoundException(
+        `Plan ${id} is not awaiting approval (status ${plan.status})`,
+      );
+    }
+    plan.status = PlanStatus.REJECTED;
+    for (const step of plan.steps) {
+      step.status = PlanStepStatus.CANCELLED;
+    }
+    const saved = await this.plans.save(plan);
+    await this.events.emit({
+      type: 'orchestration.plan.updated',
+      plan: saved.toDto(),
+    });
+    this.logger.log(`[plan ${id}] rejected`);
+    return saved;
+  }
+
+  /** Assign all steps and kick off the sequential executor (fire-and-forget). */
+  private async assignAndRun(plan: Plan): Promise<Plan> {
+    const active = await this.assignSteps(plan);
+    void this.executor.runPlan(active.id).catch((err) => {
+      this.logger.error(
+        `[plan ${active.id}] executor failed: ${(err as Error).message}`,
+      );
+    });
+    return active;
+  }
+
+  private async assignSteps(plan: Plan): Promise<Plan> {
+    plan.status = PlanStatus.ACTIVE;
+    await this.plans.save(plan);
+
+    for (const step of plan.steps) {
       const agent = await this.pickAgent(step.role);
       const task = await this.tasks.create({
         title: step.title,
         description: step.description,
         assignedAgentId: agent?.id,
-        planId: saved.id,
+        planId: plan.id,
       });
       step.taskId = task.id;
       step.agentId = agent?.id;
@@ -90,19 +156,19 @@ export class OrchestrationService {
 
       await this.events.emit({
         type: 'orchestration.plan.step.assigned',
-        planId: saved.id,
+        planId: plan.id,
         stepId: step.id,
         taskId: task.id,
         agentId: agent?.id ?? task.id,
       });
     }
 
-    const final = await this.plans.save(saved);
+    const saved = await this.plans.save(plan);
     await this.events.emit({
       type: 'orchestration.plan.updated',
-      plan: final.toDto(),
+      plan: saved.toDto(),
     });
-    return final;
+    return saved;
   }
 
   /** Ask an LLM for a plan; fall back to a deterministic local planner. */

@@ -61,10 +61,28 @@ export class ToolsService {
   }
 
   /**
-   * Execute an agent's assigned task via the OpenCode CLI. Streams progress
-   * events in real time; the transcript and token/cost accounting are stored.
+   * Execute an agent's assigned task via the OpenCode CLI (fire-and-forget).
+   * Streams progress events in real time; the transcript and token/cost
+   * accounting are stored.
    */
   async execute(dto: ExecuteToolDto): Promise<ToolRun> {
+    const { run, agentId, taskId } = await this.createRun(dto);
+    void this.spawnRun(run, agentId, taskId);
+    return run;
+  }
+
+  /** Execute and await completion. Resolves true when the run succeeded. */
+  async executeAndWait(dto: ExecuteToolDto): Promise<boolean> {
+    const { run, agentId, taskId } = await this.createRun(dto);
+    return this.spawnRun(run, agentId, taskId);
+  }
+
+  /** Validate, persist and announce the start of a tool run. */
+  private async createRun(dto: ExecuteToolDto): Promise<{
+    run: ToolRun;
+    agentId: string;
+    taskId: string;
+  }> {
     const task = await this.tasks.findById(dto.taskId);
     if (!task.assignedAgentId) {
       throw new BadRequestException(
@@ -84,6 +102,7 @@ export class ToolsService {
           `You are ${agent.name} (${agent.role}) working in Patlix World.`,
           `Persona: ${agent.persona}`,
           `Complete the assigned task end-to-end and make real changes.`,
+          `Work only inside the current working directory (this repo). Do not touch libs/, other apps/, or any repo outside it, and do not git commit.`,
           ``,
           `Task: ${task.title}`,
           `Description: ${task.description}`,
@@ -107,9 +126,7 @@ export class ToolsService {
       currentGoal: task.title,
       currentActivity: `Running opencode: ${task.title}`,
     });
-
-    void this.runProcess(saved, agent.id, task.id);
-    return saved;
+    return { run: saved, agentId: agent.id, taskId: task.id };
   }
 
   /** Resolve and permission-check the working directory. */
@@ -133,11 +150,11 @@ export class ToolsService {
     return resolved;
   }
 
-  private async runProcess(
+  private async spawnRun(
     run: ToolRun,
     agentId: string,
     taskId: string,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const bin = this.config.get<string>('OPENCODE_BIN', 'opencode') ?? 'opencode';
     const auto = this.config.get<string>('OPENCODE_AUTO', 'true') === 'true';
     const args = ['run', '--format', 'json'];
@@ -145,6 +162,11 @@ export class ToolsService {
     args.push('--dir', run.workdir, run.prompt);
 
     this.logger.log(`[run ${run.id}] ${bin} ${args.join(' ').slice(0, 160)}`);
+
+    let resolveDone!: (ok: boolean) => void;
+    const done = new Promise<boolean>((r) => {
+      resolveDone = r;
+    });
 
     const child = spawn(bin, args, {
       cwd: run.workdir,
@@ -208,7 +230,7 @@ export class ToolsService {
         tokens,
         cost,
         error: err.message,
-      });
+      }).then((ok) => resolveDone(ok));
     });
 
     child.on('close', (code) => {
@@ -219,10 +241,11 @@ export class ToolsService {
         tokens,
         cost,
         error: code === 0 ? '' : stderr.slice(0, 1000),
-      });
+      }).then((ok) => resolveDone(ok));
     });
 
     this.logger.log(`[run ${run.id}] started (pid ${child.pid})`);
+    return await done;
   }
 
   private async finishRun(
@@ -236,7 +259,7 @@ export class ToolsService {
       cost: number;
       error: string;
     },
-  ): Promise<void> {
+  ): Promise<boolean> {
     run.transcript = result.transcript;
     run.tokens = result.tokens;
     run.cost = result.cost;
@@ -281,5 +304,6 @@ export class ToolsService {
       this.logger.warn(`[run ${run.id}] failed: ${result.error.slice(0, 200)}`);
     }
     void saved;
+    return result.ok;
   }
 }

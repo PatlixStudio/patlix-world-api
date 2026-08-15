@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { OrchestrationRequest } from '@patlixworld/shared';
 
 export class OrchestrationRequestDto implements OrchestrationRequest {
@@ -9,4 +9,9 @@ export class OrchestrationRequestDto implements OrchestrationRequest {
   @IsOptional()
   @IsString()
   description?: string;
+
+  /** Gate execution on an explicit human approval. Defaults to true. */
+  @IsOptional()
+  @IsBoolean()
+  requireApproval?: boolean;
 }
