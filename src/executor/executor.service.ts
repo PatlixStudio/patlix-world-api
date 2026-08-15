@@ -147,14 +147,21 @@ export class ExecutorService implements OnApplicationBootstrap {
     }
   }
 
-  /** The design/implementation agents work on the 3D client (the demo repo). */
+  /** Determine the appropriate working directory for an agent based on their role. */
   private workdirFor(agentName: string): string {
     const root =
       process.env.WORLD_WORKSPACE_ROOT ?? '/home/Kai/development/patlix-workspace';
-    if (agentName.toLowerCase().includes('design')) {
+    const lowerName = agentName.toLowerCase();
+    
+    // Map agent names/roles to appropriate repositories
+    if (lowerName.includes('developer') || lowerName.includes('backend')) {
+      return `${root}/apps/patlix-world-api`;
+    } else if (lowerName.includes('designer') || lowerName.includes('frontend') || lowerName.includes('ui')) {
+      return `${root}/apps/patlix-world-web`;
+    } else {
+      // Default to web repo for other agents (Aurel, etc.)
       return `${root}/apps/patlix-world-web`;
     }
-    return `${root}/apps/patlix-world-web`;
   }
 
   private async findById(id: string): Promise<Plan> {

@@ -271,20 +271,44 @@ export class OrchestrationService {
     ];
   }
 
-  /** Find the best agent for a role; fall back to any idle agent. */
+  /** Find the best agent for a role: prefer idle role-matched agents, then busy role-matched agents, then any idle agent. */
   private async pickAgent(role: string): Promise<{ id: string } | null> {
     const agents = await this.agents.findAll();
     const roleNorm = role.trim().toLowerCase();
-    const idle = agents.filter((agent) => agent.status === AgentStatus.IDLE);
-    const pool = idle.length > 0 ? idle : agents;
 
-    const byRole = pool.find((agent) => {
-      const name = agent.name.toLowerCase();
-      const r = agent.role.toLowerCase();
-      return r.includes(roleNorm) || roleNorm.includes(r) || name.includes(roleNorm);
-    });
-    if (byRole) return { id: byRole.id };
-    if (pool.length > 0) return { id: pool[0].id };
+    // 1. Idle agent that matches the role (preferred)
+    const idleRoleMatch = agents.find(agent => 
+      agent.status === AgentStatus.IDLE &&
+      (agent.role.toLowerCase().includes(roleNorm) || 
+       roleNorm.includes(agent.role.toLowerCase()) ||
+       agent.name.toLowerCase().includes(roleNorm))
+    );
+    if (idleRoleMatch) {
+      return { id: idleRoleMatch.id };
+    }
+
+    // 2. Busy agent that matches the role (reuse)
+    const busyRoleMatch = agents.find(agent => 
+      agent.status !== AgentStatus.IDLE &&
+      (agent.role.toLowerCase().includes(roleNorm) || 
+       roleNorm.includes(agent.role.toLowerCase()) ||
+       agent.name.toLowerCase().includes(roleNorm))
+    );
+    if (busyRoleMatch) {
+      return { id: busyRoleMatch.id };
+    }
+
+    // 3. Any idle agent (fallback)
+    const anyIdle = agents.find(agent => agent.status === AgentStatus.IDLE);
+    if (anyIdle) {
+      return { id: anyIdle.id };
+    }
+
+    // 4. Last resort: any agent (should not happen in normal operation)
+    if (agents.length > 0) {
+      return { id: agents[0].id };
+    }
+
     return null;
   }
 }
