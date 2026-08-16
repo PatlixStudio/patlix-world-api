@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  OnApplicationBootstrap,
-} from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { Repository } from 'typeorm';
@@ -55,7 +51,9 @@ export class ExecutorService implements OnApplicationBootstrap {
       if (unfinished) {
         this.logger.log(`[plan ${plan.id}] resuming unfinished execution`);
         void this.runPlan(plan.id).catch((err) =>
-          this.logger.error(`[plan ${plan.id}] resume failed: ${(err as Error).message}`),
+          this.logger.error(
+            `[plan ${plan.id}] resume failed: ${(err as Error).message}`,
+          ),
         );
       }
     }
@@ -100,7 +98,11 @@ export class ExecutorService implements OnApplicationBootstrap {
   }
 
   /** Travel + execute one step; resolves true on success. */
-  private async runStep(step: { id: string; taskId?: string; agentId?: string }): Promise<boolean> {
+  private async runStep(step: {
+    id: string;
+    taskId?: string;
+    agentId?: string;
+  }): Promise<boolean> {
     if (!step.taskId || !step.agentId) {
       this.logger.warn(`[plan] step ${step.id} has no task/agent; marking failed`);
       return false;
@@ -132,9 +134,7 @@ export class ExecutorService implements OnApplicationBootstrap {
       });
       return ok;
     } catch (err) {
-      this.logger.error(
-        `[plan] step ${step.id} errored: ${(err as Error).message}`,
-      );
+      this.logger.error(`[plan] step ${step.id} errored: ${(err as Error).message}`);
       if (step.taskId) {
         await this.tasks
           .update(step.taskId, {
@@ -152,11 +152,15 @@ export class ExecutorService implements OnApplicationBootstrap {
     const root =
       process.env.WORLD_WORKSPACE_ROOT ?? '/home/Kai/development/patlix-workspace';
     const lowerName = agentName.toLowerCase();
-    
+
     // Map agent names/roles to appropriate repositories
     if (lowerName.includes('developer') || lowerName.includes('backend')) {
       return `${root}/apps/patlix-world-api`;
-    } else if (lowerName.includes('designer') || lowerName.includes('frontend') || lowerName.includes('ui')) {
+    } else if (
+      lowerName.includes('designer') ||
+      lowerName.includes('frontend') ||
+      lowerName.includes('ui')
+    ) {
       return `${root}/apps/patlix-world-web`;
     } else {
       // Default to web repo for other agents (Aurel, etc.)

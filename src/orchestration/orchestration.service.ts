@@ -277,29 +277,31 @@ export class OrchestrationService {
     const roleNorm = role.trim().toLowerCase();
 
     // 1. Idle agent that matches the role (preferred)
-    const idleRoleMatch = agents.find(agent => 
-      agent.status === AgentStatus.IDLE &&
-      (agent.role.toLowerCase().includes(roleNorm) || 
-       roleNorm.includes(agent.role.toLowerCase()) ||
-       agent.name.toLowerCase().includes(roleNorm))
+    const idleRoleMatch = agents.find(
+      (agent) =>
+        agent.status === AgentStatus.IDLE &&
+        (agent.role.toLowerCase().includes(roleNorm) ||
+          roleNorm.includes(agent.role.toLowerCase()) ||
+          agent.name.toLowerCase().includes(roleNorm)),
     );
     if (idleRoleMatch) {
       return { id: idleRoleMatch.id };
     }
 
     // 2. Busy agent that matches the role (reuse)
-    const busyRoleMatch = agents.find(agent => 
-      agent.status !== AgentStatus.IDLE &&
-      (agent.role.toLowerCase().includes(roleNorm) || 
-       roleNorm.includes(agent.role.toLowerCase()) ||
-       agent.name.toLowerCase().includes(roleNorm))
+    const busyRoleMatch = agents.find(
+      (agent) =>
+        agent.status !== AgentStatus.IDLE &&
+        (agent.role.toLowerCase().includes(roleNorm) ||
+          roleNorm.includes(agent.role.toLowerCase()) ||
+          agent.name.toLowerCase().includes(roleNorm)),
     );
     if (busyRoleMatch) {
       return { id: busyRoleMatch.id };
     }
 
     // 3. Any idle agent (fallback)
-    const anyIdle = agents.find(agent => agent.status === AgentStatus.IDLE);
+    const anyIdle = agents.find((agent) => agent.status === AgentStatus.IDLE);
     if (anyIdle) {
       return { id: anyIdle.id };
     }

@@ -233,9 +233,7 @@ export class SeedService implements OnApplicationBootstrap {
         `Scenario plan ${plan.id} awaiting approval (${plan.steps.length} steps)`,
       );
     } catch (err) {
-      this.logger.error(
-        `Scenario seed failed: ${(err as Error).message}`,
-      );
+      this.logger.error(`Scenario seed failed: ${(err as Error).message}`);
     }
   }
 }

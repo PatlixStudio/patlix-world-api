@@ -30,10 +30,10 @@
 # Postgres with user/db `patlixworld` must exist (see docker-compose in the parent workspace)
 cp .env.example .env
 npm install
-npm run start:dev        # http://localhost:3003/api, Swagger at /api/docs
+npm run start:dev        # http://localhost:3004/api, Swagger at /api/docs
 ```
 
-Ports are `3003` (api) / `4203` (web) to avoid collisions with arkadion (:3000/:4201) and falina (:3002/:4202).
+Ports are `3004` (api) / `4204` (web) to avoid collisions with patlix (:3000/:4200), arkadion (:3001/:4201), falina (:3002/:4202) and aurel (:3003/:4203).
 
 ## Milestones (build order)
 

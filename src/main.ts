@@ -8,7 +8,7 @@ import { AppModule } from './app.module';
 /**
  * Patlix World backend entry point.
  * Source of truth for agents, projects, properties and world state.
- * Exposes REST + Swagger + WebSocket (`/world`), default port 3003.
+ * Exposes REST + Swagger + WebSocket (`/world`), default port 3004.
  */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -29,7 +29,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = process.env.PORT ?? 3003;
+  const port = process.env.PORT ?? 3004;
   await app.listen(port);
   Logger.log(`🚀 Patlix World API on http://localhost:${port}/api`, 'Bootstrap');
   Logger.log(`📚 Swagger docs on http://localhost:${port}/api/docs`, 'Bootstrap');
