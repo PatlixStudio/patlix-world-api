@@ -24,8 +24,8 @@ describe('patlix-world-api (e2e)', () => {
     await app.close();
   });
 
-  it('GET /health returns ok', async () => {
-    const res = await request(app.getHttpServer()).get('/health').expect(200);
+  it('GET /api/health returns ok', async () => {
+    const res = await request(app.getHttpServer()).get('/api/health').expect(200);
     expect(res.body).toMatchObject({ status: 'ok' });
   });
 });
