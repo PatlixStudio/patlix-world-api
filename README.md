@@ -46,5 +46,6 @@ Ports are `3004` (api) / `4204` (web) to avoid collisions with patlix (:3000/:42
 - M7 player controller + third-person camera + physics
 - M8 AI behavior controller + minimap/waypoint + interaction
 - M9 end-to-end scenario + observability + approvals
+- M10 hardening: agent state machine per role, prompt/workspace guardrails, run metrics + outbox cleanup, e2e health spec
 
 See `PATLIX_WORLD_DECISIONS.md` at the workspace root for the full decision log.
